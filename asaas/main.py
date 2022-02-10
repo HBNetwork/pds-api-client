@@ -18,24 +18,16 @@ def listar_faturas(cpf_cnpj):
         return data
     
     def id_do_cnpj(documento):
-        endpoint = "https://www.asaas.com/api/v3"
         path="/customers"
         params = {"cpfCnpj": documento}
-        headers = {'access_token': access_token}
-        response = requests.get(f"{endpoint}{path}", headers=headers, params=params)
-        json = response.json()
-        data = json["data"]
+        data = get(path, params)
         id_cliente = data[0]["id"]
         return id_cliente
     
     def faturas(id_cliente):
-        endpoint = "https://www.asaas.com/api/v3"
         path = "/payments"
         params = {"customer": id_cliente}
-        headers = {'access_token': access_token}
-        response = requests.get(f"{endpoint}{path}", headers=headers, params=params)
-        json = response.json()
-        data = json["data"]
+        data = get(path, params)
         faturas = data
         return faturas
     
