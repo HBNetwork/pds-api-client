@@ -5,16 +5,41 @@ access_token = 'xpto'
 
 
 def listar_faturas(cpf_cnpj):
-    url_cliente = 'https://www.asaas.com/api/v3/customers?cpfCnpj=%s' % cpf_cnpj
-
-    data_cliente = requests.get(url_cliente, headers={'access_token': access_token})
-    data_cliente = data_cliente.json()
-
-    url_faturas = 'https://www.asaas.com/api/v3/payments?customer=%s' % data_cliente['data'][0]['id']
-    data_faturas = requests.get(url_faturas, headers={'access_token' : access_token})
-    data_faturas = data_faturas.json()
-
-    return data_faturas
+    """
+    1. Pega o ID do cliente.
+    2. Lista as faturas daquele ID.
+    """
+    def get(path, params):
+        endpoint = "https://www.asaas.com/api/v3"
+        headers = {'access_token': access_token}
+        response = requests.get(f"{endpoint}{path}", headers=headers, params=params)
+        json = response.json()
+        data = json["data"]
+        return data
+    
+    def id_do_cnpj(documento):
+        endpoint = "https://www.asaas.com/api/v3"
+        path="/customers"
+        params = {"cpfCnpj": documento}
+        headers = {'access_token': access_token}
+        response = requests.get(f"{endpoint}{path}", headers=headers, params=params)
+        json = response.json()
+        data = json["data"]
+        id_cliente = data[0]["id"]
+        return id_cliente
+    
+    def faturas(id_cliente):
+        endpoint = "https://www.asaas.com/api/v3"
+        path = "/payments"
+        params = {"customer": id_cliente}
+        headers = {'access_token': access_token}
+        response = requests.get(f"{endpoint}{path}", headers=headers, params=params)
+        json = response.json()
+        data = json["data"]
+        faturas = data
+        return faturas
+    
+    return faturas(id_do_cnpj(cpf_cnpj))
 
 
 def is_inadimplente(cpf_cnpj):
