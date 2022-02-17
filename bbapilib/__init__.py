@@ -8,118 +8,104 @@ from pprint import pprint
 import requests
 
 
-class BBApiPixV1:
+class BBSession(requests.Session):
+    _host = 'sandbox.bb.com.br'
+    _endpoint = None
+    _header = None
+    _client_id = None
+    _client_secret = None
+    _developer_key = None
 
-    def __init__(self, server, developer_application_key, client_id, client_secret):
-        self.developer_application_key = developer_application_key
-        self.access_token = None
-        self.header = None
+    def __init__(self, client_id: str, cliente_secret: str, developer_key: str):
+        super(BBSession, self).__init__()
+        self._endpoint = f"https://api.{self._host}/pix/v1/"
+        self._client_secret = cliente_secret
+        self._client_id = client_id
+        self._developer_key = developer_key
 
-        self.url_oauth = f"https://oauth.{server}/oauth/token"
-        self.url_pix = f"https://api.{server}/pix/v1"
+    def request(self, method: str, path='', *args, **kwargs):
 
-        self.basic_auth = self.basic_auth_gen(client_id, client_secret)
+        url = f'{self._endpoint}{path}'
 
-    def basic_auth_gen(self, client_id, client_secret):
-        text = client_id + ":" + client_secret
+        if self._header is None:
+            self.authenticate()
 
-        resp = base64.b64encode(text.encode('ascii')).decode('ascii')
+        resp = super(BBSession, self).request(method, url, *args, headers=self._header, verify=False, **kwargs)
 
-        pprint(f"Basic AUTH: {resp}")
         return resp
 
-    def get_token(self):
+    def generate_basic_auth_token(self):
+        text = self._client_id + ":" + self._client_secret
+        return base64.b64encode(text.encode('ascii')).decode('ascii')
+
+    def authenticate(self):
+
+        url_oauth = f"https://oauth.{self._host}/oauth/token"
+
         headers = {
-            'Authorization': "Basic " + self.basic_auth,
+            'Authorization': "Basic " + self.generate_basic_auth_token(),
             'Content-Type': 'application/x-www-form-urlencoded',
         }
+
         data = {
             'grant_type': 'client_credentials',
-            'code': self.developer_application_key,
+            'code': self._developer_key,
 
         }
-        pprint(self.url_oauth)
-        resp = requests.post(self.url_oauth, data=data, headers=headers, verify=False)
-        if resp.status_code not in (200, 201):
-            pprint(self.url_oauth)
-            raise RuntimeError(f'Não conseguiu gerar o token de autenticação: {resp.status_code}: {resp.content}')
+
+        resp = super(BBSession, self).request('post', url_oauth, data=data, headers=headers, verify=False)
 
         json_resp = resp.json()
 
-        self.access_token = json_resp['access_token']
+        access_token = json_resp['access_token']
 
-        self.header = {
-            'Authorization': 'Bearer ' + self.access_token,
-            #Mesmo na produção é para usar esse
-            'x-developer-application-key': self.developer_application_key
-
+        self._header = {
+            'Authorization': 'Bearer ' + access_token,
+            # Mesmo na produção é para usar esse
+            'x-developer-application-key': self._developer_key
         }
 
-    def do_get(self, url, params, **kwargs):
-        params_str = [f"{key}={value}" for key, value in params.items()]
-        params_str = "&".join(params_str)
-        pprint(params_str)
 
-        url_param = f"{url}?{params_str}"
-        pprint(url_param)
+class BBSessionProduction(BBSession):
+    _host = 'bb.com.br'
 
-        rspnc = requests.get(url_param, headers=self.header, **kwargs)
 
-        if 200 != rspnc.status_code:
-            raise RuntimeError(f"Error [{url_param}] - ({rspnc.status_code}) - {rspnc.content}")
-        pprint(rspnc)
-        json_resp = rspnc.json()
+class BBClient:
+    session = None
 
-        return json_resp
+    def __init__(self, session):
+        self.session = session
+
+    @classmethod
+    def from_credentials(cls, client_id, client_secret, developer_key, production=False):
+        session_class = BBSession
+        if production:
+            session_class = BBSessionProduction
+        return cls(session_class(client_id, client_secret, developer_key))
+
+    def request(self, method, path='', params=None, data=None, *args, **kwargs):
+        resp = self.session.request(method, path=path, params=params, data=data, *args, **kwargs)
+        resp.raise_for_status()
+        return resp
 
     def get_pix_recebidos(self, dthr_ini, dthr_fim):
 
-        url = self.url_pix + "/pix"
-        data = {
-            'inicio': '2021-12-20T00:00:01Z',
-            'fim': "2021-12-24T23:59:59Z",
-            # 'gw-app-key':     ### Informado no Header. Não precisaa aqui
-        }
-
-        rspnc = self.do_get(url, data, verify=False)
-
-        pprint(rspnc)
-
-
-    # não consegui fazer paginar
-    def get_pix_recebidos_paginacao(self, dthr_ini, dthr_fim):
-
-        url = self.url_pix + "/pix"
         data = {
             'inicio': dthr_ini,
-            'fim': "2021-12-24T23:59:59Z",
-            'paginacao.paginaAtual': 1,   # não consegui fazer paginar
-            'paginacao.itensPorPagina': 50, # não consegui fazer paginar
-            'paginacao.quantidadeDePaginas': 4,  # não consegui fazer paginar
-            'paginacao.quantidadeTotalDeItens': 167,  # não consegui fazer paginar
+            'fim': dthr_fim
         }
 
-        rspnc = self.do_get(url, data, verify=False)
+        rspnc = self.request('get', data=data)
 
-        pprint(rspnc)
-
-
-homolog = (
-    "sandbox.bb.com.br",
-    "d27b377908ffab00136be17d60050656b9a1a5b8",
-    "eyJpZCI6ImFmYjk5MDktNTQyZC00ZWNmLThlOSIsImNvZGlnb1B1YmxpY2Fkb3IiOjAsImNvZGlnb1NvZnR3YXJlIjoyODM2OSwic2VxdWVuY2lhbEluc3RhbGFjYW8iOjF9",
-    "eyJpZCI6IjA3ZDIzOTgtNGYzYi00MTgzLWFmOTMtNWZjZTUxN2YiLCJjb2RpZ29QdWJsaWNhZG9yIjowLCJjb2RpZ29Tb2Z0d2FyZSI6MjgzNjksInNlcXVlbmNpYWxJbnN0YWxhY2FvIjoxLCJzZXF1ZW5jaWFsQ3JlZGVuY2lhbCI6MSwiYW1iaWVudGUiOiJob21vbG9nYWNhbyIsImlhdCI6MTY0MjY5OTA1MDU5OH0"
-    )
+        return rspnc
 
 
 if __name__ == '__main__':
-    #url, developer_application_key, client_id, client_secret = prod_drocer
-    url, developer_application_key, client_id, client_secret = homolog
-
-
-    api = BBApiPixV1(url, developer_application_key, client_id, client_secret)
-    api.get_token()
-    dados = api.get_pix_recebidos(2, 3)
-    pprint(dados)
-
-
+    data_init = (
+        "eyJpZCI6ImFmYjk5MDktNTQyZC00ZWNmLThlOSIsImNvZGlnb1B1YmxpY2Fkb3IiOjAsImNvZGlnb1NvZnR3YXJlIjoyODM2OSwic2VxdWVuY2lhbEluc3RhbGFjYW8iOjF9",
+        "eyJpZCI6IjA3ZDIzOTgtNGYzYi00MTgzLWFmOTMtNWZjZTUxN2YiLCJjb2RpZ29QdWJsaWNhZG9yIjowLCJjb2RpZ29Tb2Z0d2FyZSI6MjgzNjksInNlcXVlbmNpYWxJbnN0YWxhY2FvIjoxLCJzZXF1ZW5jaWFsQ3JlZGVuY2lhbCI6MSwiYW1iaWVudGUiOiJob21vbG9nYWNhbyIsImlhdCI6MTY0MjY5OTA1MDU5OH0",
+        "d27b377908ffab00136be17d60050656b9a1a5b8",
+    )
+    client = BBClient.from_credentials(*data_init)
+    resp = client.get_pix_recebidos('2021-12-20T00:00:01Z', "2021-12-24T23:59:59Z")
+    pprint(resp.json())
