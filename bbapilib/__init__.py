@@ -6,6 +6,49 @@ import base64
 from pprint import pprint
 
 import requests
+from requests.auth import AuthBase, HTTPBasicAuth
+
+
+class BBAuth(AuthBase):
+    OAUTH_ENDPOINT = "https://oauth.bb.com.br/oauth/token"
+
+    def __init__(self, client_id, client_secret, developer_key):
+        # super(BBAuthBaseHomologacao, self).__init__(client_id, client_secret)
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.developer_key = developer_key
+        self._token = None
+        self.credentials = (client_id, client_secret)
+
+    @property
+    def token(self):
+        if not self._token:
+            self.renew()
+        return self._token
+
+    def renew(self):
+        data = {
+            'grant_type': 'client_credentials',
+            'code': self.developer_key,
+        }
+
+        resp = requests.post(self.OAUTH_ENDPOINT, data=data, verify=False, auth=self.credentials)
+
+        json_resp = resp.json()
+
+        token = json_resp['access_token']
+        token_type = json_resp['token_type']
+        self._token = f'{token_type} {token}'
+
+    def __call__(self, r):
+        r.headers['Authorization'] = self.token
+        r.headers['x-developer-application-key'] = self.developer_key
+        print(self.token)
+        return r
+
+
+class BBAuthSandbox(BBAuth):
+    OAUTH_ENDPOINT = "https://oauth.sandbox.bb.com.br/oauth/token"
 
 
 class BBSession(requests.Session):
@@ -101,11 +144,23 @@ class BBClient:
 
 
 if __name__ == '__main__':
-    data_init = (
-        "eyJpZCI6ImFmYjk5MDktNTQyZC00ZWNmLThlOSIsImNvZGlnb1B1YmxpY2Fkb3IiOjAsImNvZGlnb1NvZnR3YXJlIjoyODM2OSwic2VxdWVuY2lhbEluc3RhbGFjYW8iOjF9",
-        "eyJpZCI6IjA3ZDIzOTgtNGYzYi00MTgzLWFmOTMtNWZjZTUxN2YiLCJjb2RpZ29QdWJsaWNhZG9yIjowLCJjb2RpZ29Tb2Z0d2FyZSI6MjgzNjksInNlcXVlbmNpYWxJbnN0YWxhY2FvIjoxLCJzZXF1ZW5jaWFsQ3JlZGVuY2lhbCI6MSwiYW1iaWVudGUiOiJob21vbG9nYWNhbyIsImlhdCI6MTY0MjY5OTA1MDU5OH0",
-        "d27b377908ffab00136be17d60050656b9a1a5b8",
-    )
-    client = BBClient.from_credentials(*data_init)
-    resp = client.get_pix_recebidos('2021-12-20T00:00:01Z', "2021-12-24T23:59:59Z")
-    pprint(resp.json())
+    client_id = "eyJpZCI6ImFmYjk5MDktNTQyZC00ZWNmLThlOSIsImNvZGlnb1B1YmxpY2Fkb3IiOjAsImNvZGlnb1NvZnR3YXJlIjoyODM2OSwic2VxdWVuY2lhbEluc3RhbGFjYW8iOjF9x"
+    client_secret = "eyJpZCI6IjA3ZDIzOTgtNGYzYi00MTgzLWFmOTMtNWZjZTUxN2YiLCJjb2RpZ29QdWJsaWNhZG9yIjowLCJjb2RpZ29Tb2Z0d2FyZSI6MjgzNjksInNlcXVlbmNpYWxJbnN0YWxhY2FvIjoxLCJzZXF1ZW5jaWFsQ3JlZGVuY2lhbCI6MSwiYW1iaWVudGUiOiJob21vbG9nYWNhbyIsImlhdCI6MTY0MjY5OTA1MDU5OH0"
+    developer_key = "d27b377908ffab00136be17d60050656b9a1a5b8"
+    OAUTH_ENDPOINT = "https://oauth.sandbox.bb.com.br/oauth/token"
+    api_url = f"https://api.sandbox.bb.com.br/pix/v1/"
+
+    auth = BBAuthSandbox(client_id, client_secret, developer_key)
+
+    data = {
+        'grant_type': 'client_credentials',
+        'code': developer_key,
+    }
+
+    resp = requests.get(api_url, data=data, verify=False, auth=auth)
+    pprint(resp.content)
+    print('fim')
+
+# resp = client.get_pix_recebidos('2021-12-20T00:00:01Z', "2021-12-24T23:59:59Z")
+# {"statusCode":401,"error":"Unauthorized","message":"Bad Credentials","attributes":{"error":"Bad Credentials"}}
+
