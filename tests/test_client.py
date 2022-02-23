@@ -33,10 +33,10 @@ def test_request_raise_for_status(client, mocker):
     mock.return_value.raise_for_status.assert_called_once()
 
 
-def test_get_pix_recebidos(client, mocker):
+def received_pixs(client, mocker):
     mock = mocker.patch("bbapilib.BBClient.request")
 
-    client.get_pix_recebidos("dtini", "dtend")
+    client.receiveds_pixs("dtini", "dtend")
 
     mock.assert_called_once_with(
         'get',

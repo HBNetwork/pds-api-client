@@ -98,16 +98,15 @@ class BBClient:
         resp.raise_for_status()
         return resp
 
-    def get_pix_recebidos(self, dthr_ini, dthr_fim):
-
+    def received_pixs(self, init_datetime, end_datetime):
         data = {
-            'inicio': dthr_ini,
-            'fim': dthr_fim
+            'inicio': init_datetime,
+            'fim': end_datetime
         }
 
-        rspnc = self.request('get', data=data)
+        resp = self.request('get', data=data)
 
-        return rspnc
+        return resp
 
 
 if __name__ == '__main__':
@@ -121,7 +120,7 @@ if __name__ == '__main__':
         developer_key=developer_key,
     ))
 
-    resp = client.get_pix_recebidos('2021-12-20T00:00:01Z', "2021-12-24T23:59:59Z")
+    resp = client.received_pixs('2021-12-20T00:00:01Z', "2021-12-24T23:59:59Z")
     
     print(resp.json())
 
