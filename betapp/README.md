@@ -1,0 +1,7 @@
+- [X] Remover prefixo get_ das funções
+- [X] Remover client do utils
+- [ ] Criar classe forecast para remover eval
+- [ ] Usar attrs e cattrs
+- [ ] Documentar como rodar
+- [ ] Remover abertura de arquivo do teste
+- [ ] Fazer fixture para decotor dos testes

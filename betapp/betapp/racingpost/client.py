@@ -7,6 +7,53 @@ from dateutil import tz
 from typing import List
 
 
+class Forecast(float):
+    def __new__(cls, value=0):
+        if not value:
+            value = float(0)
+        elif '/' in str(value):
+            num, den = value.split('/')
+            value = float(num) / float(den)
+        number = super().__new__(cls, value)
+        return number
+
+        number = super().__new__(cls, value)
+        # if not number._is_precise(decimal_precision):
+        #     number = number._round(decimal_precision)
+        return number
+
+    # pass
+    # def __new__(cls, value):
+    #     if '/' not in str(value):
+    #         value = super().__new__(cls, value)
+    #         return value._to_forecast()
+    #     # if not value:
+    #     #     return cls(0.0)
+
+    #     # if '/' in value:
+    #     num, den = value.split('/')
+    #     # else:
+    #     #     num = value
+    #     #     den = 1
+
+    #     value = float(num) / float(den)
+    #     value = super().__new__(cls, value)
+    #     return value._to_forecast()
+
+    # def _to_forecast(self, value):
+    #     return Forecast(value)
+
+    def __repr__(self):
+        return "{0}({1!r})".format(self.__class__.__name__, self.__str__())
+        return "{0}({1!r})".format(self.__class__.__name__, super().__str__())
+
+    def __str__(self):
+        return "{:n}".format(self)
+
+    # def _to_float(self, value):
+    #     return Forecast(value)
+
+
 @dataclass
 class Race:
     id: int
@@ -50,7 +97,7 @@ def to_datetime(date, mask='%Y-%m-%d %H:%M'):
     return date
 
 
-def deserializer_tracks_with_races(data):
+def deserialize_tracks_with_races(data):
     extracted_data = []
     for track_data in data:
         track = Track(id=int(track_data['track_id']),
@@ -67,7 +114,7 @@ def deserializer_tracks_with_races(data):
     return extracted_data
 
 
-def deserializer_dogs_in_race(data):
+def deserialize_dogs_in_race(data):
     extracted_data = []
 
     for dog_data in data:
@@ -95,7 +142,7 @@ class RacingPostClient:
         json_data = r.json()
         return json_data
 
-    def get_tracks_with_races(self, date):
+    def tracks_with_races(self, date):
         path = '/meeting/blocks.sd'
         params = {
             'r_date': date.isoformat(),
@@ -107,9 +154,9 @@ class RacingPostClient:
 
         items_data = data['list']['items']
 
-        return deserializer_tracks_with_races(items_data)
+        return deserialize_tracks_with_races(items_data)
 
-    def get_dogs_in_race(self, id, date):
+    def dogs_in_race(self, id, date):
         path = '/card/blocks.sd'
         params = {
             'race_id': id,
@@ -122,13 +169,13 @@ class RacingPostClient:
 
         dogs_data = data['form']['dogs']
 
-        return deserializer_dogs_in_race(dogs_data)
+        return deserialize_dogs_in_race(dogs_data)
 
 
 if __name__ == '__main__':
     import pprint
 
     racingpost = RacingPostClient()
-    tracks = racingpost.get_tracks_with_races(datetime.date.today())
-    dogs = racingpost.get_dogs_in_race(tracks[0].races[0].id, datetime.date.today())
+    tracks = racingpost.tracks_with_races(datetime.date.today())
+    dogs = racingpost.dogs_in_race(tracks[0].races[0].id, datetime.date.today())
     pprint.pprint(dogs)
