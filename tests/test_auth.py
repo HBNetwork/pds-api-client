@@ -2,7 +2,7 @@ import pytest
 import responses
 import requests
 
-from bbapilib import BBAuthSandbox
+from bbapilib import BBAuthSandbox, BadCredentials
 
 URL = "https://oauth.sandbox.bb.com.br/oauth/token"
 
@@ -43,14 +43,13 @@ def test_renew_data(auth, mocker):
 
     mock.assert_called_with(URL, data=data, verify=False, auth=auth.credentials)
 
-# @responses.activate
-# def test_renew_401(auth):
-#     responses.add(
-#         responses.GET,
-#         "https://api.sandbox.bb.com.br/pix/v1/",
-#         json={""},
-#         status=401,
-#     )
-#
-#     requests.get("https://api.sandbox.bb.com.br/pix/v1/")
+@responses.activate
+def test_bad_credentials(auth):
+    responses.add(
+        responses.POST,
+        URL,
+        status=401
+    )
 
+    with pytest.raises(BadCredentials):
+        auth.renew()

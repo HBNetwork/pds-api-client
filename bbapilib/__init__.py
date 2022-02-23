@@ -3,6 +3,10 @@ import requests
 from requests.auth import AuthBase
 
 
+class BadCredentials(Exception):
+    ...
+
+
 class BBAuth(AuthBase):
     OAUTH_ENDPOINT = "https://oauth.bb.com.br/oauth/token"
 
@@ -26,6 +30,8 @@ class BBAuth(AuthBase):
         }
 
         resp = requests.post(self.OAUTH_ENDPOINT, data=data, verify=False, auth=self.credentials)
+        if resp.status_code == 401:
+            raise BadCredentials()
 
         json_resp = resp.json()
 
