@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 
 import requests
 from requests.auth import AuthBase
@@ -15,17 +16,45 @@ class BBAuth(AuthBase):
         self.credentials = (client_id, client_secret)
         self.developer_key = developer_key
         self._token = None
+        self.expires_in = None
+
+    @property
+    def is_valid(self):
+        now = datetime.now()
+        if not self._token or not self.expires_in or self.expires_in <= now:
+            return False
+        return True
 
     @property
     def token(self):
-        if not self._token:
+        if not self.is_valid:
             self.renew()
         return self._token
 
     @token.setter
     def token(self, token):
         type_, value = token
-        self._token = f'{type_} {value}x'
+        self._token = f'{type_} {value}'
+
+    def handle_401(self, r, **kwargs):
+        if r.status_code != 401:
+            return r
+
+        # force token renew
+        self.renew()
+
+        # Consume content and release the original connection
+        # to allow our new request to reuse the same one.
+        r.content
+        r.close()
+        prep = r.request.copy()
+
+        prep.headers['Authorization'] = self.token
+        _r = r.connection.send(prep, **kwargs)
+        _r.history.append(r)
+        _r.request = prep
+
+        return _r
 
     def renew(self):
         data = {
@@ -41,9 +70,12 @@ class BBAuth(AuthBase):
 
         self.token = json['token_type'], json['access_token']
 
+        self.expires_in = datetime.now() + timedelta(seconds=json['expires_in'])
+
     def __call__(self, r):
         r.headers['Authorization'] = self.token
         r.headers['x-developer-application-key'] = self.developer_key
+        r.register_hook("response", self.handle_401)
         return r
 
 
