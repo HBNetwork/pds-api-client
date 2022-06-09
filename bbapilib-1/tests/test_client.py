@@ -1,44 +1,29 @@
-from unittest.mock import Mock
+import re
+
 import pytest
-from bbapilib import BBClient, BBSession
+import responses
+from requests import HTTPError
 
-@pytest.fixture
-def client():
-    return BBClient.from_credentials("1", "2", "3")
-
-
-def test_from_credentials(client):
-    assert isinstance(client.session, BBSession)
+URL_SERVICE = "https://api.bb.com/pix/v1/"
 
 
-def test_request(client, mocker):
-    mock = mocker.patch("bbapilib.BBSession.request")
-
-    client.request("get", "/some/path/")
-
-    mock.assert_called_once_with(
-        "get",
-        path="/some/path/",
-        params=None,
-        data=None,
+@responses.activate
+def test_client_raises_on_failed_status_code(client_authenticated):
+    responses.add(
+        responses.GET,
+        URL_SERVICE,
+        status=400
     )
 
-def test_request_raise_for_status(client, mocker):
-    mock = mocker.patch("bbapilib.BBSession.request", return_value=Mock(
-        raise_for_status=Mock()
-    ))
-
-    client.request("get", "/")
-
-    mock.return_value.raise_for_status.assert_called_once()
+    with pytest.raises(HTTPError):
+        client_authenticated.request("GET", "")
 
 
-def received_pixs(client, mocker):
-    mock = mocker.patch("bbapilib.BBClient.request")
+@responses.activate
+def test_received_pixs_success(client_authenticated):
+    responses.add("GET", re.compile(r".+\?inicio=dtini&fim=dtend"),
+                  status=200, match_querystring=True)
 
-    client.receiveds_pixs("dtini", "dtend")
+    r = client_authenticated.received_pixs("dtini", "dtend")
 
-    mock.assert_called_once_with(
-        'get',
-        data={"inicio": "dtini", "fim": "dtend"}
-    )
+    assert r.status_code == 200
