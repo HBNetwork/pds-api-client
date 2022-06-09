@@ -1,0 +1,8 @@
+django==3.1.7
+dateutils==0.6.12
+python-decouple==3.4
+dj-database-url==0.5.0
+pytz==2021.1
+requests==2.27.1
+pytest==7.0.1
+responses==0.18.0
