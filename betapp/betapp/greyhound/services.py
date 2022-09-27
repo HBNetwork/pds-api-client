@@ -80,9 +80,7 @@ def calc_bends(dog, distance, count):
              "fin": 0}
 
     for history in History.objects.filter(dog=dog, distance=distance).exclude(bends='').order_by('-date')[:count]:
-        bend = history.bends
-
-        if bend:
+        if bend := history.bends:
             bends['bend1'] += int(bend[0] or 0)
             if len(bend) > 1:
                 bends['bend2'] += int(bend[1] or 0)
@@ -117,19 +115,19 @@ def direction(trap, distance, count):
         return 'center'
 
     direction = max(remarks, key=remarks.get)
-    if (trap.position == 1 or trap.position == 2) and direction == 'rls':
+    if trap.position in [1, 2] and direction == 'rls':
         return 'left'
-    elif (trap.position == 1 or trap.position == 2) and (direction == 'mid' or direction == 'wide'):
+    elif trap.position in [1, 2] and direction in ['mid', 'wide']:
         return 'right'
-    elif (trap.position == 3 or trap.position == 4) and direction == 'rls':
+    elif trap.position in [3, 4] and direction == 'rls':
         return 'left'
-    elif (trap.position == 3 or trap.position == 4) and direction == 'mid':
+    elif trap.position in [3, 4] and direction == 'mid':
         return 'center'
-    elif (trap.position == 3 or trap.position == 4) and direction == 'right':
+    elif trap.position in [3, 4] and direction == 'right':
         return 'right'
-    elif (trap.position == 5 or trap.position == 6) and (direction == 'rls' or direction == 'mid'):
+    elif trap.position in [5, 6] and direction in ['rls', 'mid']:
         return 'left'
-    elif (trap.position == 5 or trap.position == 6) and direction == 'wide':
+    elif trap.position in [5, 6] and direction == 'wide':
         return 'center'
 
     return None
@@ -389,7 +387,7 @@ def calc_remarks_trap(dog, race):
                 points[str(history.trap)] += remarks.remarks[remark]
                 loops[str(history.trap)] += 1
 
-    for key, point in points.items():
+    for key in points:
         if loops[key] > 0:
             points[key] = round(points[key] / loops[key], 2)
 
@@ -446,17 +444,18 @@ def rating(dog, race):
 def avg_pos(dog, race):
     """ Retorna a média de posição """
     history = History.objects.filter(dog=dog, distance=race.distance, grade__in=filter_grade(race.grade)).aggregate(avg_pos=Avg('placing'))
-    if history['avg_pos']:
-        return round(history['avg_pos'], 2)
-
-    return 0
+    return round(history['avg_pos'], 2) if history['avg_pos'] else 0
 
 
 def top_split(dog, race):
     """ Retorna o melhor split do galgo """
-    history = History.objects.filter(dog=dog, race__track__track_id=race.track.track_id, distance=race.distance,
-                                     grade__in=filter_grade(race.grade), split__gt=0).values_list('split', flat=True)
-    if history:
+    if history := History.objects.filter(
+        dog=dog,
+        race__track__track_id=race.track.track_id,
+        distance=race.distance,
+        grade__in=filter_grade(race.grade),
+        split__gt=0,
+    ).values_list('split', flat=True):
         history = min(remove_outlier(list(map(float, history))))
         return history
 
@@ -465,9 +464,13 @@ def top_split(dog, race):
 
 def avg_split(dog, race):
     """ Retorna a média de split do galgo """
-    history = History.objects.filter(dog=dog, race__track__track_id=race.track.track_id, distance=race.distance,
-                                     grade__in=filter_grade(race.grade), split__gt=0).values_list('split', flat=True)
-    if history:
+    if history := History.objects.filter(
+        dog=dog,
+        race__track__track_id=race.track.track_id,
+        distance=race.distance,
+        grade__in=filter_grade(race.grade),
+        split__gt=0,
+    ).values_list('split', flat=True):
         history = remove_outlier(list(map(float, history)))
         return round((sum(history) / len(history)), 2)
 
@@ -476,9 +479,12 @@ def avg_split(dog, race):
 
 def avg_time(dog, race):
     """ Retorna a média de tempo do galgo """
-    history = History.objects.filter(dog=dog, distance=race.distance, grade__in=filter_grade(
-        race.grade), duration__gt=0).values_list('duration', flat=True)
-    if history:
+    if history := History.objects.filter(
+        dog=dog,
+        distance=race.distance,
+        grade__in=filter_grade(race.grade),
+        duration__gt=0,
+    ).values_list('duration', flat=True):
         history = remove_outlier(list(map(float, history)))
         return round((sum(history) / len(history)), 2)
 
@@ -492,19 +498,23 @@ def last_times(dog, race, count):
 
     if not history:
         history = History.objects.filter(dog=dog, distance=race.distance, duration__gt=0).order_by('-date').first()
-        if history:
-            return [float(history.duration)]
-        return [0]
-
+        return [float(history.duration)] if history else [0]
     return list(map(float, history))
 
 
 def last_splits(dog, race, count):
     """ Retorna uma lista com a quantidade espcifica dos ultimos splits """
-    history = History.objects.filter(dog=dog, race__track__track_id=race.track.track_id, distance=race.distance, grade__in=filter_grade(
-        race.grade), split__gt=0).order_by('-date').values_list('split', flat=True)
-
-    if history:
+    if (
+        history := History.objects.filter(
+            dog=dog,
+            race__track__track_id=race.track.track_id,
+            distance=race.distance,
+            grade__in=filter_grade(race.grade),
+            split__gt=0,
+        )
+        .order_by('-date')
+        .values_list('split', flat=True)
+    ):
         if count > 1:
             return remove_outlier(list(map(float, history)))[:count]
         elif count == 1:
@@ -530,10 +540,7 @@ def topspeed(dog, race):
 
 def forecast(dog, race):
     info = Info.objects.get(dog=dog, race=race)
-    if info.forecast:
-        return float(info.forecast)
-
-    return 3
+    return float(info.forecast) if info.forecast else 3
 
 
 def avg_speed(dog, race):
@@ -558,12 +565,18 @@ def trainer(dog, race):
 
 def track_stats(track_id, distance):
     stats = TrackStats.objects.get(track_id=track_id, distance=distance)
-    output = {
-        'traps': [stats.trap1, stats.trap2, stats.trap3, stats.trap4, stats.trap5, stats.trap6],
+    return {
+        'traps': [
+            stats.trap1,
+            stats.trap2,
+            stats.trap3,
+            stats.trap4,
+            stats.trap5,
+            stats.trap6,
+        ],
         'sex': [stats.female, stats.male],
-        'avg_weight': stats.avg_weight
+        'avg_weight': stats.avg_weight,
     }
-    return output
 
 
 def avg_time_in_trap(dog, distance):
@@ -577,7 +590,7 @@ def avg_time_in_trap(dog, distance):
         times[str(history.trap)] += history.duration
         loops[str(history.trap)] += 1
 
-    for key, time in times.items():
+    for key in times:
         if loops[key] > 0:
             times[key] = round(times[key] / loops[key], 2)
 
@@ -585,7 +598,7 @@ def avg_time_in_trap(dog, distance):
 
 
 def alerts_avb(dog, distance, trap):
-    alert = list()
+    alert = []
 
     # Verificando o tempo do dog na trap
     avg_time = avg_time_in_trap(dog, distance)
@@ -626,7 +639,7 @@ def last_grade(dog):
     for data in history:
 
         if data.grade in grades:
-            output += data.grade + " - "
+            output += f"{data.grade} - "
 
             if data.grade != "A0" and "A" in data.grade:
                 points += grade_a.index(data.grade)
@@ -644,13 +657,9 @@ def last_grade(dog):
 
 def last_recovery(dog):
     """ Retorna a recuperação do galgo nas últimas corridas """
-    output = list()
     history = History.objects.filter(dog=dog).order_by('-date').all()[:12]
 
-    for history in history:
-        output.append(history.recovery())
-
-    return output
+    return [history.recovery() for history in history]
 
 
 def filter_grade(grade):
@@ -661,8 +670,6 @@ def filter_grade(grade):
     grade_hp = ['HP']
     grade_or = ['OR']
     grade_s = ['S8', 'S7', 'S6', 'S5', 'S4', 'S3', 'S2', 'S1']
-    grade_t = ['T4', 'T3', 'T2', 'T1']
-
     if "A" in grade:
         return grade_a
     elif "B" in grade:
@@ -676,6 +683,8 @@ def filter_grade(grade):
     elif "OR" in grade:
         return grade_or
     else:
+        grade_t = ['T4', 'T3', 'T2', 'T1']
+
         return grade_a + grade_t
 
 def calc_wintime(dog, race):
@@ -690,10 +699,7 @@ def calc_wintime(dog, race):
 
         loop += 1
 
-    if loop:
-        return round(sum_wintime/loop, 2)
-
-    return 0
+    return round(sum_wintime/loop, 2) if loop else 0
 
 def remove_outlier(values):
     fator = 2.0  # 1.5 é o fator de multiplicacao
@@ -722,17 +728,13 @@ def get_greyhound_history(dog):
     data = fetch_data(URL)
 
     for hist_json in data['search-dog-details']['forms']:
-        if hist_json['rInstId']:
-            race_id = hist_json['rInstId']
-        else:
-            race_id = int(hist_json['raceTime'].replace(
-                "-", "").split(" ")[0] + hist_json['trackId'] + hist_json['winnersTimeS'].replace(".", ""))
+        race_id = hist_json['rInstId'] or int(
+            hist_json['raceTime'].replace("-", "").split(" ")[0]
+            + hist_json['trackId']
+            + hist_json['winnersTimeS'].replace(".", "")
+        )
 
-        if hist_json['rGradeCde']:
-            grade = hist_json['rGradeCde']
-        else:
-            grade = hist_json['trialFlag']
-
+        grade = hist_json['rGradeCde'] or hist_json['trialFlag']
         track = Track.objects.filter(
             track_id=int(hist_json['trackId'])).first()
         if not track:
@@ -806,7 +808,7 @@ def filter_dogs(data):
     grade and query.setdefault('trap__race__grade__in', grade)
     distance and query.setdefault('trap__race__distance__in', distance)
     result and query.setdefault('trap__race__result__placing__in', result)
-    
+
     if result:
         query.setdefault('trap__race__result__trap', F('trap'))
 
@@ -816,15 +818,12 @@ def filter_dogs(data):
         query.setdefault('trap__race__info__rating__lte', int(rating[1]))
         query.setdefault('trap__race__info__dog', F('trap__dog'))
 
-    
+
     scores = Score.objects \
         .prefetch_related('trap', 'trap__race', 'trap__dog') \
         .filter(**query).exclude(exclude_query).order_by('trap__race__date')
 
-    output = {
-        'list': [],
-        'results': dict()
-    }
+    output = {'list': [], 'results': {}}
     green = 0
     red = 0
     wait = 0
@@ -858,8 +857,7 @@ def filter_dogs(data):
     return output
 
 def last_weight(dog):
-    hist = History.objects.filter(dog=dog).order_by('-date').first()
-    if hist:
+    if hist := History.objects.filter(dog=dog).order_by('-date').first():
         return hist.weight
     return 0
 
@@ -881,32 +879,34 @@ def transform_in_rank(data, reverse=False):
         return points
 
 def verify_result(trap, objetive, result):
-    if result:
-        if objetive == "back":
-            if trap.position == int(result[0]):
-                return '<i title="Green" class="fas fa-check-circle green"></i>'
-        elif objetive == "backplaced":
-            if trap.position == int(result[0]) or trap.position == int(result[1]):
-                return '<i title="Green" class="fas fa-check-circle green"></i>'
-        elif objetive == "lay":
-            if trap.position != int(result[0]):
-                return '<i title="Green" class="fas fa-check-circle green"></i>'
-        elif objetive == "layplaced":
-            if trap.position != int(result[0]) and trap.position != int(result[1]):
-                return '<i title="Green" class="fas fa-check-circle green"></i>'
-        elif objetive == "top3":
-                if len(result) >= 3:
-                    if trap.position == int(result[0]) or trap.position == int(result[1]) or trap.position == int(result[2]):
-                        return '<i title="Green" class="fas fa-check-circle green"></i>'
+    if not result:
+        return '<i title="Sem Resultado" class="fas fa-spinner wait"></i>'
+    if objetive == "back":
+        if trap.position == int(result[0]):
+            return '<i title="Green" class="fas fa-check-circle green"></i>'
+    elif objetive == "backplaced":
+        if trap.position in [int(result[0]), int(result[1])]:
+            return '<i title="Green" class="fas fa-check-circle green"></i>'
+    elif objetive == "lay":
+        if trap.position != int(result[0]):
+            return '<i title="Green" class="fas fa-check-circle green"></i>'
+    elif objetive == "layplaced":
+        if trap.position not in [int(result[0]), int(result[1])]:
+            return '<i title="Green" class="fas fa-check-circle green"></i>'
+    elif objetive == "top3":
+        if len(result) >= 3 and trap.position in [
+            int(result[0]),
+            int(result[1]),
+            int(result[2]),
+        ]:
+            return '<i title="Green" class="fas fa-check-circle green"></i>'
 
-        return '<i title="Red" class="fas fa-times red"></i>'
-
-    return '<i title="Sem Resultado" class="fas fa-spinner wait"></i>'
+    return '<i title="Red" class="fas fa-times red"></i>'
 
 def embate(race, dog_a, dog_b):
     hist1 = History.objects.filter(dog=dog_a).exclude(grade__in=['T1', 'T2', 'T3', 'T4', 'T5']).order_by('-date')
     hist2 = History.objects.filter(dog=dog_b).exclude(grade__in=['T1', 'T2', 'T3', 'T4', 'T5']).order_by('-date')
-    messages = list()
+    messages = []
     for h1 in hist1:
         for h2 in hist2:
             if h1.race.date == h2.race.date:

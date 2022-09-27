@@ -6,9 +6,7 @@ from bbapilib import BBAuth, BBSession
 
 @pytest.fixture
 def session():
-    session = BBSession(None)
-
-    return session
+    return BBSession(None)
 
 
 def test_endpoint():

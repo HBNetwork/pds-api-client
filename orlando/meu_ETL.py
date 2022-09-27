@@ -38,7 +38,7 @@ class Extract_1(Extract):
 
     def get_cotacao(self, fii):
         fii = fii.replace('/fiis/', '')
-        url = 'https://finance.yahoo.com/quote/' + fii + '.SA'
+        url = f'https://finance.yahoo.com/quote/{fii}.SA'
         response = requests.get(url, headers=self.header)
         if response.status_code == 200:
             soup = BeautifulSoup(response.content, 'lxml')
@@ -70,10 +70,9 @@ class Extract_2(Extract):
         return self.lista_fiis
 
     def get_cotacao(self, fii):
-        url = 'https://mfinance.com.br/api/v1/fiis/' + fii
+        url = f'https://mfinance.com.br/api/v1/fiis/{fii}'
         res = requests.get(url).json()
-        cotacao = str(res['lastPrice'])
-        return cotacao
+        return str(res['lastPrice'])
 
     def __str__(self):
         return "Classe Extract que faz uso da API mfinance "
@@ -180,16 +179,16 @@ if __name__ == "__main__":
     meu_etl = MeuETL(extrator2, loader1)
     meu_etl.execute()
     t2 = time.time()
-    print("--- %s seconds ---" % (t2 - t1))
+    print(f"--- {t2 - t1} seconds ---")
 
     t1 = time.time()
     meu_etl = MeuETL(extrator1, loader2)
     meu_etl.execute()
     t2 = time.time()
-    print("--- %s seconds ---" % (t2 - t1))
+    print(f"--- {t2 - t1} seconds ---")
 
     t1 = time.time()
     meu_etl = MeuETL(extrator2, loader3)
     meu_etl.execute()
     t2 = time.time()
-    print("--- %s seconds ---" % (t2 - t1))
+    print(f"--- {t2 - t1} seconds ---")

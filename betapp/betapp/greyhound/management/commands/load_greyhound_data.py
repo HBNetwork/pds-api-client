@@ -17,14 +17,12 @@ class Command(BaseCommand):
         self.import_history()
 
     def import_races(self):
-        URL = "https://greyhoundbet.racingpost.com/meeting/blocks.sd?r_date="+self.today_to_string+"&view=time&blocks=header%2Clist"
+        URL = f"https://greyhoundbet.racingpost.com/meeting/blocks.sd?r_date={self.today_to_string}&view=time&blocks=header%2Clist"
+
 
         data = fetch_data(URL)
 
-        total_races = 0
-        for race in data['list']['items']: 
-            total_races += race['racesCount']
-
+        total_races = sum(race['racesCount'] for race in data['list']['items'])
         count = 0
         for track_json in data['list']['items']:
             track, _ = Track.objects.get_or_create(track_id=int(track_json['track_id']), 
@@ -56,7 +54,8 @@ class Command(BaseCommand):
         total_dogs = len(races) * 6
         count = 0
         for race in races:
-            URL = "https://greyhoundbet.racingpost.com/card/blocks.sd?race_id="+str(race.race_id)+"&r_date="+ self.today_to_string +"&tab=form&blocks=card-header%2Ccard-pager%2Ccard-tabs%2Ccard-title%2Cform"
+            URL = f"https://greyhoundbet.racingpost.com/card/blocks.sd?race_id={str(race.race_id)}&r_date={self.today_to_string}&tab=form&blocks=card-header%2Ccard-pager%2Ccard-tabs%2Ccard-title%2Cform"
+
 
             data = fetch_data(URL)
 
@@ -72,7 +71,11 @@ class Command(BaseCommand):
                         dog.name = dog_json['dogName']
                         dog.save()
 
-                if not dog_json['forecast'] or not '/' in dog_json['forecast'] or 'N/O' in dog_json['forecast']:
+                if (
+                    not dog_json['forecast']
+                    or '/' not in dog_json['forecast']
+                    or 'N/O' in dog_json['forecast']
+                ):
                     dog_json['forecast'] = '0'
 
                 handicap = None
@@ -86,13 +89,14 @@ class Command(BaseCommand):
                 if not exists_info:
                     exists_trainer = Trainer.objects.filter(name=dog_json['trainerName'])
 
-                    if not exists_trainer:
-                        trainer = Trainer.objects.create(
+                    trainer = (
+                        exists_trainer[0]
+                        if exists_trainer
+                        else Trainer.objects.create(
                             name=dog_json['trainerName'],
-                            location=dog_json['trainerLocation']
+                            location=dog_json['trainerLocation'],
                         )
-                    else:
-                        trainer = exists_trainer[0]
+                    )
 
                     season = dog_json['dateOfSeason'].replace('(', '').replace(')', '')
                     season_type = None
@@ -134,10 +138,8 @@ class Command(BaseCommand):
         traps = Trap.objects.filter(race__in=races)
 
         total_traps = len(traps)
-        count = 0
-        for trap_info in traps:
+        for count, trap_info in enumerate(traps, start=1):
             get_greyhound_history(trap_info.dog)
 
-            count += 1
             stats = round((count/total_traps) * 100, 2)
             print(f"{stats}% history of race imported", end='\r')

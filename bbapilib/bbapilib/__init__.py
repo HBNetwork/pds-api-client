@@ -21,9 +21,7 @@ class BBAuth(AuthBase):
     @property
     def is_valid(self):
         now = datetime.now()
-        if not self._token or not self.expires_in or self.expires_in <= now:
-            return False
-        return True
+        return bool(self._token and self.expires_in and self.expires_in > now)
 
     @property
     def token(self):
@@ -93,8 +91,7 @@ class BBSession(requests.Session):
 
     def request(self, method: str, path='', *args, **kwargs):
         url = self.ENDPOINT + path
-        resp = super().request(method, url, *args, verify=self.USE_CERT, **kwargs)
-        return resp
+        return super().request(method, url, *args, verify=self.USE_CERT, **kwargs)
 
 
 class BBSessionSandbox(BBSession):
@@ -126,9 +123,7 @@ class BBClient:
             'fim': end_datetime
         }
 
-        resp = self.request('get', params=params)
-
-        return resp
+        return self.request('get', params=params)
 
 
 class BBClientSandbox(BBClient):
@@ -148,7 +143,7 @@ if __name__ == '__main__':
     )
 
     resp = client.received_pixs('2021-12-20T00:00:01Z', "2021-12-24T23:59:59Z")
-    
+
     print(resp.json())
 
 # {"statusCode":401,"error":"Unauthorized","message":"Bad Credentials","attributes":{"error":"Bad Credentials"}}

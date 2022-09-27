@@ -24,10 +24,11 @@ class Command(BaseCommand):
         for race in races:
             result = Result.objects.filter(race=race)
             if not result.exists() or len(result) <= 4:
-                url = "https://greyhoundbet.racingpost.com/results/blocks.sd?race_id="+str(race.race_id)+"&track_id="+str(race.track.track_id) +"&r_date="+self.today_to_string+"&blocks=meetingHeader%2Cresults-meeting-pager%2Clist"
+                url = f"https://greyhoundbet.racingpost.com/results/blocks.sd?race_id={str(race.race_id)}&track_id={str(race.track.track_id)}&r_date={self.today_to_string}&blocks=meetingHeader%2Cresults-meeting-pager%2Clist"
+
                 data = fetch_data(url)
 
-                
+
                 if "errorCode" in data['list']:
                     continue
 
@@ -54,7 +55,7 @@ class Command(BaseCommand):
 
                                 if not trainer:
                                     trainer = Trainer.objects.create(name=result['trainer'], location='')
-                                
+
                                 Info.objects.create(dog=dog, race=race, trainer=trainer, reserve=True)
 
                             # Atualizando a trap

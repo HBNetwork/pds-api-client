@@ -14,13 +14,7 @@ class Forecast(float):
         elif '/' in str(value):
             num, den = value.split('/')
             value = float(num) / float(den)
-        number = super().__new__(cls, value)
-        return number
-
-        number = super().__new__(cls, value)
-        # if not number._is_precise(decimal_precision):
-        #     number = number._round(decimal_precision)
-        return number
+        return super().__new__(cls, value)
 
     # pass
     # def __new__(cls, value):
@@ -45,7 +39,6 @@ class Forecast(float):
 
     def __repr__(self):
         return "{0}({1!r})".format(self.__class__.__name__, self.__str__())
-        return "{0}({1!r})".format(self.__class__.__name__, super().__str__())
 
     def __str__(self):
         return "{:n}".format(self)
@@ -139,8 +132,7 @@ class RacingPostClient:
     # Seria interessante ter um dispatcher para retornar o data correto para cada endpoint?
     def request(self, path, params):
         r = requests.get(self.ENDPOINT + path, params=params)
-        json_data = r.json()
-        return json_data
+        return r.json()
 
     def tracks_with_races(self, date):
         path = '/meeting/blocks.sd'

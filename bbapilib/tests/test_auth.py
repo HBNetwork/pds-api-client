@@ -16,8 +16,7 @@ def auth():
     client_id = "id"
     client_secret = "secret"
     developer_key = "key"
-    auth = BBAuthSandbox(client_id, client_secret, developer_key)
-    return auth
+    return BBAuthSandbox(client_id, client_secret, developer_key)
 
 def test_token_initial_none(auth):
     assert auth._token is None

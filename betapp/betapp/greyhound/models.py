@@ -22,14 +22,11 @@ class Dog(models.Model):
         today = date.today()
         age = relativedelta(today, self.birth)
         old = ''
-        if age.years > 1:
-            old += str(age.years) + ' anos '
-        else:
-            old += str(age.years) + ' ano '
+        old += f'{str(age.years)} anos ' if age.years > 1 else f'{str(age.years)} ano '
         if age.months and age.months > 1:
-            old += str(age.months) + ' meses'
+            old += f'{str(age.months)} meses'
         else:
-            old += str(age.months) + ' mês'
+            old += f'{str(age.months)} mês'
 
         return old
 
@@ -39,12 +36,10 @@ class Dog(models.Model):
         return (age.years * 365) + (age.months * 30) + age.days
 
     def current_weight(self):
-        if self.history_set.last():
-            return self.history_set.last().weight
-        return 0
+        return self.history_set.last().weight if self.history_set.last() else 0
 
     def __str__(self):
-        return '{}'.format(self.name)
+        return f'{self.name}'
 
 
 class Info(models.Model):
@@ -67,8 +62,7 @@ class Info(models.Model):
 
     def day_away(self):
         today = today = date.today()
-        hist = History.objects.filter(dog=self.dog).order_by('-date').first()
-        if hist:
+        if hist := History.objects.filter(dog=self.dog).order_by('-date').first():
             return (today - hist.date.date()).days - 1
         return None
 
@@ -145,27 +139,19 @@ class Race(models.Model):
     video = models.FileField(upload_to='replays', null=True, blank=True)
 
     def __str__(self):
-        return '{} - {} - {}'.format(self.date, self.track.name, self.grade)
+        return f'{self.date} - {self.track.name} - {self.grade}'
 
     def post_pick_traps(self):
-        if self.post_pick:
-            return self.post_pick[0:5].split('-')
-        return []
+        return self.post_pick[:5].split('-') if self.post_pick else []
 
     def sportinglife_tips(self):
-        if self.sportinglife:
-            return self.sportinglife[0:5].split('-')
-        return []
+        return self.sportinglife[:5].split('-') if self.sportinglife else []
 
     def timeform_tips(self):
-        if self.timeform:
-            return self.timeform[0:5].split('-')
-        return []
+        return self.timeform[:5].split('-') if self.timeform else []
 
     def tips(self):
-        if self.tipdetails:
-            return self.tipdetails.split('-')
-        return []
+        return self.tipdetails.split('-') if self.tipdetails else []
 
     def result(self):
         return self.result_set.values_list('trap__position', flat=True).order_by('placing')
@@ -191,7 +177,7 @@ class Track(models.Model):
     races = TrackRaceManager()
 
     def __str__(self):
-        return '{}'.format(self.name)
+        return f'{self.name}'
 
 
 class TrackStats(models.Model):
@@ -209,7 +195,7 @@ class TrackStats(models.Model):
 
     def __str__(self):
         track = Track.objects.get(track_id=self.track_id)
-        return '{} - {}'.format(track.name, self.distance)
+        return f'{track.name} - {self.distance}'
 
 
 class Trap(models.Model):
@@ -221,5 +207,5 @@ class Trap(models.Model):
         ordering = ['position']
 
     def __str__(self):
-        return '{} -  {}'.format(self.position, self.dog.name)
+        return f'{self.position} -  {self.dog.name}'
 

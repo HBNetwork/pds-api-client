@@ -3,13 +3,10 @@ import collections
 from .models import *
 from collections import Counter
 
-remarks = list()
+remarks = []
 for history in History.objects.all():
-    for remark in history.remarks.split(','):
-        remarks.append(remark.strip())
-
+    remarks.extend(remark.strip() for remark in history.remarks.split(','))
 remarks = Counter(remarks)
 remarks = collections.OrderedDict(sorted(remarks.items(), key=lambda x: x[1], reverse=True))
-file = open('remarks.json', 'w')
-file.write(json.dumps(remarks))
-file.close()
+with open('remarks.json', 'w') as file:
+    file.write(json.dumps(remarks))

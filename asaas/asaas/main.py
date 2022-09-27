@@ -94,12 +94,11 @@ class AsaasClient:
     
     def faturas(self, id_cliente, status=None):
         params = {"customer": id_cliente}
-        
+
         if status is not None:
             params["status"] = status
-            
-        data = self.request("GET", "/payments", params=params)
-        return data
+
+        return self.request("GET", "/payments", params=params)
 
 
 class AsaasService:
@@ -111,12 +110,12 @@ class AsaasService:
     
     def is_inadimplente(self, cpf_cnpj):
         # verifica se a pessoa esta com mais de trinta dias de atraso ou com duas faturas atrasadas
-        
+
         id_cliente = self.client.id_do_cnpj(cpf_cnpj)
-        
+
         faturas_atrasadas = self.client.faturas(id_cliente, status=PaymentStatus.OVERDUE)
         totalCount = len(faturas_atrasadas)
-        
+
         inadimplente = False
         atrasadas = 0
         dias_atraso = 0

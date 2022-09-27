@@ -12,16 +12,12 @@ def fetch_data(URL):
             with urlopen(URL) as url:
                 return json.loads(url.read().decode())
         except:
-            print('#{}'.format(i), URL)
+            print(f'#{i}', URL)
             time.sleep(10)
 
 
 def only_digits(data):
-    match = re.search(r'(\d+(\.\d+)?)', data)
-    if match: 
-        return match.group()
-    else:
-        return 0
+    return match.group() if (match := re.search(r'(\d+(\.\d+)?)', data)) else 0
 
 
 def to_datetime(date, mask='%Y-%m-%d %H:%M'):
@@ -67,6 +63,4 @@ def filter_name_abbr(name):
         "Wtrfd": "Waterford"
     }
 
-    if name in names.keys():
-        return names[name]
-    return name
+    return names.get(name, name)
